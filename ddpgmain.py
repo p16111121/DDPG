@@ -18,7 +18,7 @@ RANDOM_SEED = 123  # random seed, can be either an int number or None
 RENDER = False  # render while training
 
 ALG_NAME = 'DDPG'
-TRAIN_EPISODES = 300  # total number of episodes for training
+TRAIN_EPISODES = 5000  # total number of episodes for training
 TEST_EPISODES = 10  # total number of episodes for training
 MAX_STEPS = 200  # total number of steps for each episode
 
@@ -52,7 +52,7 @@ class AUVEnvironment:
         #reward
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值
         pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值
-        reward=(-1)*dep_error+(-1)*pitch_error
+        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180
         
         #done
         if sec>MAX_STEPS:
