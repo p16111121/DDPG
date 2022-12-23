@@ -56,7 +56,7 @@ class AUVEnvironment:
         #reward
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值
         pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值
-        reward=(-1)*dep_error+(-1)*pitch_error
+        reward=0.6*(-1)*dep_error+0.4*(-1)*pitch_error*1.05/180
         #done
         if sec>MAX_STEPS:
             done=1
