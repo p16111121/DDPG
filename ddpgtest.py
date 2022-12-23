@@ -130,10 +130,6 @@ if __name__ == '__main__':
             stern_angle=[]
             for step in range(MAX_STEPS):
                 action = agent.get_action(state)
-                """if step>=20:#前20s做浮航
-                    action = agent.get_action(state)#得到動作 action>0代表向下 action<0代表向上
-                else:
-                    action = np.array(0)"""
                 stern_angle.append(action.flatten().tolist())
                 state_, reward, done = env.step(state,action,step)
                 episode_reward += reward
