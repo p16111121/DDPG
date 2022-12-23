@@ -10,10 +10,10 @@ import tensorflow as tf
 import tensorlayer as tl
 import matlab.engine
 import numpy as np
-from ddpgmain import DDPG,plan_dep,plan_pitch
+from ddpgmain import AUVEnvironment,DDPG,plan_dep,plan_pitch
 #####################  hyper parameters  ####################
 
-ENV_ID = 'Pendulum-v0'  # environment id
+#ENV_ID = 'Pendulum-v0'  # environment id
 RANDOM_SEED = 2  # random seed, can be either an int number or None
 RENDER = False  # render while training
 
@@ -32,50 +32,6 @@ VAR = 3  # control exploration
 #預設路徑 200筆
 plan_dep = plan_dep
 plan_pitch = plan_pitch
-#env
-class AUVEnvironment:
-    def __init__(self):
-        self.StateVec=[]
-        self.PressureSensor=[]
-        self.static_times=0
-
-    def step(self,init,stern,sec):
-
-        [state_,pressure]=eng.step(matlab.double([init.tolist()]),matlab.double([stern.tolist()]),matlab.double([sec]),nargout=2)
-        state_=np.array(state_).flatten()
-        self.StateVec.append(state_.tolist())
-
-        pressure=np.array(pressure)
-        self.PressureSensor.append(pressure.flatten().tolist())
-        
-        """if dep_error<=0.1:
-            self.static_times+=1
-        else:
-            self.static_times=0"""
-
-        #reward
-        dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值
-        pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值
-        reward=0.6*(-1)*dep_error+0.4*(-1)*pitch_error*1.05/180
-        #done
-        if sec>MAX_STEPS:
-            done=1
-        #elif self.static_times>=5:
-            #done=1
-        else:
-            done=0
-
-        return state_, reward, done
-
-    def reset(self):
-        #清空狀態矩陣
-        self.StateVec=[]
-        self.PressureSensor=[]
-        
-        init = [0.5 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0]
-        self.StateVec.append(init)
-        
-        return np.array(init)
 
 #儲存資料
 def createdir():
@@ -102,7 +58,6 @@ def savecsv(i,fpath):
 
 if __name__ == '__main__':
     env = AUVEnvironment()
-    eng=matlab.engine.start_matlab()
     
     # reproducible 隨機種子
   
