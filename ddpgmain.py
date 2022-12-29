@@ -189,7 +189,7 @@ class DDPG(object):
            
         #critic更新
         with tf.GradientTape() as tape:
-            actions_ = self.actor_target(states_)#將新狀態輸入actor target得到action
+            actions_ = self.actor_target(states_)#將新狀態輸入actor target得到 action target
             q_ = self.critic_target([states_, actions_])#輸入critic target 得到q target
             y = rewards + GAMMA * q_ #更新目標y
             q = self.critic([states, actions])
