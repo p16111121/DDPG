@@ -18,7 +18,7 @@ RANDOM_SEED = 123  # random seed, can be either an int number or None
 RENDER = False  # render while training
 
 ALG_NAME = 'DDPG'
-TRAIN_EPISODES = 100  # total number of episodes for training
+TRAIN_EPISODES = 3000  # total number of episodes for training
 TEST_EPISODES = 10  # total number of episodes for training
 MAX_STEPS = 200  # total number of steps for each episode
 
@@ -52,8 +52,9 @@ class AUVEnvironment(object):
         #reward
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值
         pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值
-        reward=0.6*(-1)*dep_error+0.4*(-1)*pitch_error*1.05/180
-        
+        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180
+        #先進行無權重測式 
+        #之後設置error於0~0.1時 error==0 以避免過於追蹤誤差為0
         #done
         if sec>MAX_STEPS:
             done=1
@@ -350,6 +351,20 @@ if __name__ == '__main__':
 
     except KeyboardInterrupt:
         try:
+            agent.save()
+            print("Model saved!!")
+            plt.plot(all_episode_reward)
+            if not os.path.exists('image'):
+                os.makedirs('image')
+            plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
+            print("Training is done!!")
             sys.exit(0) #引發一個異常 退出編譯器 若在子執行緒使用就只能退出子執行緒 主執行緒仍然能運作
         except SystemExit:
+            agent.save()
+            print("Model saved!!")
+            plt.plot(all_episode_reward)
+            if not os.path.exists('image'):
+                os.makedirs('image')
+            plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
+            print("Training is done!!")
             os._exit(0) #直接將程式終止
