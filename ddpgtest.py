@@ -100,8 +100,10 @@ if __name__ == '__main__':
                     time.time() - t0
                 )
             )
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         try:
+            print(e)
             sys.exit(0)
-        except SystemExit:
+        except SystemExit as e:
+            print(e)
             os._exit(0)
