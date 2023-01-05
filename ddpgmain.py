@@ -51,11 +51,11 @@ class AUVEnvironment(object):
         self.PressureSensor.append(pressure.flatten().tolist())
         
         #reward
-        stern_position=abs(self.old_stern-stern)
+        stern_position=abs(self.old_stern-stern) # stern角度改變量
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值
-        if dep_error<=0.15: dep_error==0
+        if dep_error <= 0.15: elsedep_error=0
         pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值
-        if pitch_error<=0.15: pitch_error==0
+        if pitch_error<=0.15: pitch_error=0
         reward=(-1)*dep_error+(-1)*pitch_error*1.05/180
         #先進行無權重測式 
         #之後設置error於0~0.1時 error==0 以避免過於追蹤誤差為0
