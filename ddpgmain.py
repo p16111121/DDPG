@@ -277,6 +277,14 @@ def savecsv(i,fpath):
     with open(f"{fpath}/stern{i}.csv","w",newline="") as f:
         cw=csv.writer(f)
         cw.writerows(stern_angle[j] for j in range(len(stern_angle)))
+def saveresult():
+    agent.save()
+    print("Model saved!!")
+    plt.plot(all_episode_reward)
+    if not os.path.exists('image'):
+        os.makedirs('image')
+    plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
+    print("Training is done!!")
 
 if __name__ == '__main__':
     env = AUVEnvironment()
@@ -347,31 +355,13 @@ if __name__ == '__main__':
                 if sum(recent_episode_reward)/5 >= -1:
                     print("Error > -1! Stop Training...")
                     break
-        agent.save()
-        print("Model saved!!")
-        plt.plot(all_episode_reward)
-        if not os.path.exists('image'):
-            os.makedirs('image')
-        plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
-        print("Training is done!!")
+        saveresult()
 
 
     except KeyboardInterrupt:
         try:
-            agent.save()
-            print("Model saved!!")
-            plt.plot(all_episode_reward)
-            if not os.path.exists('image'):
-                os.makedirs('image')
-            plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
-            print("Training is done!!")
+            saveresult()
             sys.exit(0) #引發一個異常 退出編譯器 若在子執行緒使用就只能退出子執行緒 主執行緒仍然能運作
         except SystemExit:
-            agent.save()
-            print("Model saved!!")
-            plt.plot(all_episode_reward)
-            if not os.path.exists('image'):
-                os.makedirs('image')
-            plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
-            print("Training is done!!")
+            saveresult()
             os._exit(0) #直接將程式終止
