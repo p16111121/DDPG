@@ -53,9 +53,9 @@ class AUVEnvironment(object):
         #reward
         #stern_position=abs(self.old_stern-stern) # stern角度改變量 單位theta
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值 單位m
-        if dep_error <= 0.1: elsedep_error=0 #深度誤差小於10cm
+        if dep_error <= 0.05: elsedep_error=0 #深度誤差小於10cm
         pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值 單位theta
-        if pitch_error<= 5: pitch_error=0 #pitch誤差小於5度
+        if pitch_error<= 2.5: pitch_error=0 #pitch誤差小於5度
         reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)
         #先進行無權重測式 
         #之後設置error於0~0.1時 error==0 以避免過於追蹤誤差為0
@@ -338,7 +338,8 @@ if __name__ == '__main__':
                 episode_reward += reward
                 if done:
                     break
-            savecsv(i,fpath)
+            if episode%25==0:     #每25episode記錄一次csv   
+                savecsv(i,fpath)
             i+=1
             if episode == 0:
                 all_episode_reward.append(episode_reward)
@@ -355,6 +356,8 @@ if __name__ == '__main__':
                 if sum(recent_episode_reward)/5 >= -1:
                     print("Error > -1! Stop Training...")
                     break
+            if episode%100==0: #每100episode存一次結果
+                saveresult()
         saveresult()
 
 
