@@ -100,7 +100,7 @@ if __name__ == '__main__':
                     time.time() - t0
                 )
             )
-    except KeyboardInterrupt as e:
+    except Exception as e:
         try:
             print(e)
             sys.exit(0)

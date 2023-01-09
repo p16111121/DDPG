@@ -59,12 +59,11 @@ class AUVEnvironment(object):
         if pitch_error<= 2.5: pitch_error=0 #pitch誤差小於5度
         #reward=(-1)*dep_error+(-1)*pitch_error*1.05/180
         reward=(-1)*pitch_error
-        #先進行無權重測式 
-        #之後設置error於0~0.1時 error==0 以避免過於追蹤誤差為0
-        #done
 
         self.old_stern=stern
 
+        #done
+        
         if sec>MAX_STEPS:
             self.done=1
         #elif self.static_times>=5:
@@ -364,7 +363,7 @@ if __name__ == '__main__':
         saveresult()
 
 
-    except KeyboardInterrupt as e:
+    except Exception as e:
         try:
             print(e)
             saveresult()
