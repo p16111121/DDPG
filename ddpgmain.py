@@ -40,6 +40,7 @@ class AUVEnvironment(object):
         self.PressureSensor=[]
         self.eng=matlab.engine.start_matlab()
         self.old_stern=0
+        self.done=0
 
     def step(self,init,stern,sec):
 
@@ -56,7 +57,8 @@ class AUVEnvironment(object):
         if dep_error <= 0.05: elsedep_error=0 #深度誤差小於10cm
         pitch_error=abs(plan_pitch[sec]-(state_[10])*57.3) # pitch angle 誤差絕對值 單位theta
         if pitch_error<= 2.5: pitch_error=0 #pitch誤差小於5度
-        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)
+        #reward=(-1)*dep_error+(-1)*pitch_error*1.05/180
+        reward=(-1)*pitch_error
         #先進行無權重測式 
         #之後設置error於0~0.1時 error==0 以避免過於追蹤誤差為0
         #done
@@ -64,11 +66,11 @@ class AUVEnvironment(object):
         self.old_stern=stern
 
         if sec>MAX_STEPS:
-            done=1
+            self.done=1
         #elif self.static_times>=5:
             #done=1
         else:
-            done=0
+            self.done=0
 
         return state_, reward, done
 
@@ -78,7 +80,7 @@ class AUVEnvironment(object):
         self.PressureSensor=[]
         init = [0.5 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0 ,0]
         self.StateVec.append(init)
-        
+        self.done=0
         return np.array(init)
 
 class DDPG(object):
@@ -337,6 +339,7 @@ if __name__ == '__main__':
                 state = state_ #更新狀態值
                 episode_reward += reward
                 if done:
+                    print("Done!")
                     break
             if episode%25==0:     #每25episode記錄一次csv   
                 savecsv(i,fpath)
