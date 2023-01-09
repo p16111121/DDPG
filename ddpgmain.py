@@ -72,7 +72,7 @@ class AUVEnvironment(object):
         else:
             self.done=0
 
-        return state_, reward, done
+        return state_, reward, self.done
 
     def reset(self):
         #清空狀態矩陣
