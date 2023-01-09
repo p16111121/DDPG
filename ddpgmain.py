@@ -364,10 +364,12 @@ if __name__ == '__main__':
         saveresult()
 
 
-    except KeyboardInterrupt:
+    except KeyboardInterrupt as e:
         try:
+            print(e)
             saveresult()
             sys.exit(0) #引發一個異常 退出編譯器 若在子執行緒使用就只能退出子執行緒 主執行緒仍然能運作
         except SystemExit:
+            print(e)
             saveresult()
             os._exit(0) #直接將程式終止
