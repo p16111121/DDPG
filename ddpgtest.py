@@ -1,7 +1,7 @@
 import argparse
 import os,sys
 import time
-
+import traceback  
 import gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -98,9 +98,7 @@ if __name__ == '__main__':
                 )
             )
     except Exception as e:
-        try:
-            print(e)
-            sys.exit(0)
-        except SystemExit as e:
-            print(e)
-            os._exit(0)
+        print(e)
+        traceback.print_exc()
+        saveresult()
+        os._exit(0) #直接將程式終止
