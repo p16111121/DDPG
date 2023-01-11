@@ -39,11 +39,12 @@ class AUVEnvironment(object):
         self.StateVec=[]
         self.PressureSensor=[]
         self.eng=matlab.engine.start_matlab()
-        self.old_stern=0
+        self.old_stern=[0.]
 
     def step(self,init,stern,sec):
-
-        [state_,pressure]=self.eng.step(matlab.double([init.tolist()]),matlab.double([stern.tolist()]),matlab.double([sec]),nargout=2)
+        init=init.tolist()
+        stern=stern.tolist()
+        [state_,pressure]=self.eng.step(matlab.double([init]),matlab.double([stern]),matlab.double([sec]),nargout=2)
         state_=np.array(state_).flatten()
         self.StateVec.append(state_.tolist())
 
@@ -51,13 +52,14 @@ class AUVEnvironment(object):
         self.PressureSensor.append(pressure.flatten().tolist())
         
         #reward
-        #stern_position=abs(self.old_stern-stern) # stern角度改變量 單位theta
+        stern_position=abs(self.old_stern-stern) # stern角度改變量 單位theta
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值 單位m
-        if dep_error <= 0.1: elsedep_error=0 #深度誤差小於1cm
+        #if dep_error <= 0.1: elsedep_error=0 #深度誤差小於1cm
         pitch_error=abs(0-(state_[10])*57.3) # pitch angle 誤差絕對值 單位theta
-        if pitch_error<= 5: pitch_error=0 #pitch誤差小於2.5度
-        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180
+        #if pitch_error<= 5: pitch_error=0 #pitch誤差小於2.5度
 
+        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_position
+        
         self.old_stern=stern
 
         #done
@@ -351,8 +353,8 @@ if __name__ == '__main__':
             )
             recent_episode_reward[episode%5]=episode_reward
             if recenttruefalse == 1:
-                if sum(recent_episode_reward)/5 >= -1:
-                    print("Error > -1! Stop Training...")
+                if sum(recent_episode_reward)/5 >= -1.5:
+                    print("Error > -1.5! Stop Training...")
                     break
             if (episode+1)%100==0: #每100episode存一次結果
                 saveresult()
