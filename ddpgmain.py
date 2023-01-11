@@ -1,7 +1,7 @@
 import argparse
 import os,sys
 import time
-
+import traceback  
 #import gym
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,12 +39,11 @@ class AUVEnvironment(object):
         self.StateVec=[]
         self.PressureSensor=[]
         self.eng=matlab.engine.start_matlab()
-        self.old_stern=[0.]
+        self.old_stern=0
 
     def step(self,init,stern,sec):
-        init=init.tolist()
-        stern=stern.tolist()
-        [state_,pressure]=self.eng.step(matlab.double([init]),matlab.double([stern]),matlab.double([sec]),nargout=2)
+
+        [state_,pressure]=self.eng.step(matlab.double([init.tolist()]),matlab.double([stern.tolist()]),matlab.double([sec]),nargout=2)
         state_=np.array(state_).flatten()
         self.StateVec.append(state_.tolist())
 
@@ -52,15 +51,14 @@ class AUVEnvironment(object):
         self.PressureSensor.append(pressure.flatten().tolist())
         
         #reward
-        stern_position=abs(self.old_stern-stern) # stern角度改變量 單位theta
+        
+        stern_error=abs(self.old_stern-stern[0]) # stern角度改變量 單位theta
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值 單位m
         #if dep_error <= 0.1: elsedep_error=0 #深度誤差小於1cm
         pitch_error=abs(0-(state_[10])*57.3) # pitch angle 誤差絕對值 單位theta
         #if pitch_error<= 5: pitch_error=0 #pitch誤差小於2.5度
-
-        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_position
-        
-        self.old_stern=stern
+        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error
+        self.old_stern=stern[0]
 
         #done
         
@@ -362,11 +360,7 @@ if __name__ == '__main__':
 
 
     except Exception as e:
-        try:
-            print(e)
-            saveresult()
-            sys.exit(0) #引發一個異常 退出編譯器 若在子執行緒使用就只能退出子執行緒 主執行緒仍然能運作
-        except SystemExit:
-            print(e)
-            saveresult()
-            os._exit(0) #直接將程式終止
+        print(e)
+        traceback.print_exc()
+        saveresult()
+        os._exit(0) #直接將程式終止
