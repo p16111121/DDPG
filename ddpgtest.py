@@ -10,7 +10,7 @@ import tensorflow as tf
 import tensorlayer as tl
 import matlab.engine
 import numpy as np
-from ddpgmain import AUVEnvironment,DDPG,plan_dep,plan_pitch
+from ddpgmain import AUVEnvironment,DDPG,plan_dep
 #####################  hyper parameters  ####################
 
 #ENV_ID = 'Pendulum-v0'  # environment id
@@ -28,10 +28,7 @@ GAMMA = 0.9  # reward discount
 TAU = 0.01  # soft replacement
 MEMORY_CAPACITY = 10000  # size of replay buffer
 BATCH_SIZE = 32  # update action batch size
-VAR = 3  # control exploration
-#預設路徑 200筆
-plan_dep = plan_dep
-plan_pitch = plan_pitch
+VAR = 4  # control exploration
 
 #儲存資料
 def createdir():
