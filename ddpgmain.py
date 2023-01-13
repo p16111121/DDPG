@@ -40,6 +40,7 @@ class AUVEnvironment(object):
         self.PressureSensor=[]
         self.eng=matlab.engine.start_matlab()
         self.old_stern=0
+        self.old_pitch=0
 
     def step(self,init,stern,sec):
 
@@ -54,10 +55,13 @@ class AUVEnvironment(object):
         
         stern_error=abs(self.old_stern-stern[0]) # stern角度改變量 單位theta
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值 單位m
-        #if dep_error <= 0.1: elsedep_error=0 #深度誤差小於1cm
-        pitch_error=abs(0-(state_[10])*57.3) # pitch angle 誤差絕對值 單位theta
+        if dep_error <= 0.1: elsedep_error=0 #深度誤差小於1cm
+        current_pitch=(state_[10])*57.3
+        pitch_error=abs(self.old_pitch-current_pitch) # pitch angle 誤差絕對值 單位theta
         #if pitch_error<= 5: pitch_error=0 #pitch誤差小於2.5度
-        reward=0.9*((-1)*dep_error+(-1)*pitch_error*1.05/180)+0.1*(-1)*stern_error
+        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
+
+        self.old_pitch=current_pitch
         self.old_stern=stern[0]
 
         #done
