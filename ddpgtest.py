@@ -81,9 +81,9 @@ if __name__ == '__main__':
             episode_reward = 0
             stern_angle=[]
             for step in range(MAX_STEPS):
-                action = agent.get_action(state)
-                stern_angle.append(action.flatten().tolist())
+                action = np.array(agent.get_action(state ,greedy=True))
                 state_, reward, done = env.step(state,action,step)
+                stern_angle.append(action.flatten().tolist())
                 episode_reward += reward
                 state = state_
                 if done:
@@ -100,5 +100,5 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         traceback.print_exc()
-        saveresult()
+        
         os._exit(0) #直接將程式終止
