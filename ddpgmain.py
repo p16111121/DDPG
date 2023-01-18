@@ -54,11 +54,12 @@ class AUVEnvironment(object):
         #reward
         
         stern_error=abs(self.old_stern-stern[0]) # stern角度改變量 單位theta
+        if stern_error <=1: stern_error=0 #stern改變量小於1度
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值 單位m
-        if dep_error <= 0.1: dep_error=0 #深度誤差小於10cm
+        #if dep_error <= 0.1: dep_error=0 #深度誤差小於10cm
         current_pitch=(state_[10])*57.3 #當前pitch
         pitch_error=abs(self.old_pitch-current_pitch) # pitch angle 誤差絕對值 單位theta
-        #if pitch_error<= 5: pitch_error=0 #pitch誤差小於2.5度
+        #if pitch_error<= 1: pitch_error=0 #pitch誤差小於1度
         reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
 
         self.old_pitch=current_pitch
