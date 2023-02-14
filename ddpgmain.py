@@ -30,6 +30,9 @@ MEMORY_CAPACITY = 10000  # size of replay buffer
 BATCH_SIZE = 32  # update action batch size
 VAR = 4  # control exploration
 
+lam_a=1
+lam_s=5
+
 ###############################  DDPG  ####################################
 #預設路徑 200筆
 plan_dep = [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-0.0022,-0.0122,-0.0309,-0.0572,-0.0900,-0.1284,-0.1713,-0.2179,-0.2674,-0.3189,-0.3716,-0.4250,-0.4784,-0.5311,-0.5826,-0.6324,-0.6801,-0.7253,-0.7676,-0.8068,-0.8427,-0.8749,-0.9035,-0.9283,-0.9493,-0.9665,-0.9799,-0.9897,-0.9961,-0.9993,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000,-1.0000]#env
@@ -56,10 +59,10 @@ class AUVEnvironment(object):
         stern_error=abs(self.old_stern-stern[0]) # stern角度改變量 單位theta
         if stern_error <=1: stern_error=0 #stern改變量小於1度
         dep_error=abs(plan_dep[sec]-(-1*pressure)) # 深度誤差絕對值 單位m
-        #if dep_error <= 0.1: dep_error=0 #深度誤差小於10cm
+        if dep_error <= 0.02: dep_error=0 #深度誤差小於2cm
         current_pitch=(state_[10])*57.3 #當前pitch
         pitch_error=abs(self.old_pitch-current_pitch) # pitch angle 誤差絕對值 單位theta
-        #if pitch_error<= 1: pitch_error=0 #pitch誤差小於1度
+        if pitch_error<= 1: pitch_error=0 #pitch誤差小於1度
         reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
 
         self.old_pitch=current_pitch
@@ -201,16 +204,23 @@ class DDPG(object):
         with tf.GradientTape() as tape:
             actions_ = self.actor_target(states_)#將新狀態輸入actor target得到 action target
             q_ = self.critic_target([states_, actions_])#輸入critic target 得到q target
-            y = rewards + GAMMA * q_ #更新目標y
+            y = rewards + GAMMA * q_ #更新目標y bellman function
             q = self.critic([states, actions])
             td_error = tf.losses.mean_squared_error(y, q)#計算目標y跟預測q的均方誤差
-        critic_grads = tape.gradient(td_error, self.critic.trainable_weights)
+        critic_grads = tape.gradient(td_error, self.critic.trainable_weights)#求梯度
         self.critic_opt.apply_gradients(zip(critic_grads, self.critic.trainable_weights))
         #actor更新
         with tf.GradientTape() as tape:
             a = self.actor(states)
             q = self.critic([states, a])
             actor_loss = -tf.reduce_mean(q)  # maximize the q 更新方式為梯度上升 故前面要加上負號
+
+            #CAPS
+            if lam_a >0:
+                actor_loss+= lam_a*tf.nn.l2_loss(actions_-actions)/tf.cast(tf.shape(actions)[0],float)
+            if lam_s >0:
+                actor_loss+= lam_s*tf.nn.l2_loss(a-actions)/tf.cast(tf.shape(actions)[0],float)
+            
         actor_grads = tape.gradient(actor_loss, self.actor.trainable_weights)
         self.actor_opt.apply_gradients(zip(actor_grads, self.actor.trainable_weights))
         self.ema_update()#滑動平均更新(將新的參數賦值給target net)
@@ -356,8 +366,8 @@ if __name__ == '__main__':
             )
             recent_episode_reward[episode%5]=episode_reward
             if recenttruefalse == 1:
-                if sum(recent_episode_reward)/5 >= -1:
-                    print("Error > -1! Stop Training...")
+                if sum(recent_episode_reward)/5 >= -0.5:
+                    print("Error > -0.5! Stop Training...")
                     break
             if (episode+1)%100==0: #每100episode存一次結果
                 saveresult()
