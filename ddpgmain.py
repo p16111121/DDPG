@@ -18,7 +18,7 @@ RANDOM_SEED = 123  # random seed, can be either an int number or None
 RENDER = False  # render while training
 
 ALG_NAME = 'DDPG'
-TRAIN_EPISODES = 3000  # total number of episodes for training
+TRAIN_EPISODES = 5000  # total number of episodes for training
 TEST_EPISODES = 10  # total number of episodes for training
 MAX_STEPS = 200  # total number of steps for each episode
 
@@ -28,10 +28,10 @@ GAMMA = 0.9  # reward discount
 TAU = 0.01  # soft replacement
 MEMORY_CAPACITY = 10000  # size of replay buffer
 BATCH_SIZE = 32  # update action batch size
-VAR = 4  # control exploration
+VAR = 0  # control exploration
 
 lam_a=1
-lam_s=5
+lam_s=1
 
 ###############################  DDPG  ####################################
 #預設路徑 200筆
@@ -62,8 +62,9 @@ class AUVEnvironment(object):
         if dep_error <= 0.02: dep_error=0 #深度誤差小於2cm
         current_pitch=(state_[10])*57.3 #當前pitch
         pitch_error=abs(self.old_pitch-current_pitch) # pitch angle 誤差絕對值 單位theta
-        if pitch_error<= 1: pitch_error=0 #pitch誤差小於1度
-        reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
+        #if pitch_error<= 1: pitch_error=0 #pitch誤差小於1度
+        #reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
+        reward=(-1)*dep_error
 
         self.old_pitch=current_pitch
         self.old_stern=stern[0]
@@ -200,30 +201,35 @@ class DDPG(object):
         rewards = datas[:, -self.state_dim - 1:-self.state_dim]#取出reward
         states_ = datas[:, -self.state_dim:]#取出執行a得到的狀態
            
-        #critic更新
-        with tf.GradientTape() as tape:
+        
+        with tf.GradientTape() as tape:#GradientTape() 建立正向傳播的計算圖
+            #critic更新
             actions_ = self.actor_target(states_)#將新狀態輸入actor target得到 action target
             q_ = self.critic_target([states_, actions_])#輸入critic target 得到q target
             y = rewards + GAMMA * q_ #更新目標y bellman function
             q = self.critic([states, actions])
-            td_error = tf.losses.mean_squared_error(y, q)#計算目標y跟預測q的均方誤差
+            td_error = tf.losses.mean_squared_error(y, q)#計算目標y跟預測q的MSE
         critic_grads = tape.gradient(td_error, self.critic.trainable_weights)#求梯度
-        self.critic_opt.apply_gradients(zip(critic_grads, self.critic.trainable_weights))
-        #actor更新
+        self.critic_opt.apply_gradients(zip(critic_grads, self.critic.trainable_weights)) #先更新critic
+
         with tf.GradientTape() as tape:
+            #actor更新
             a = self.actor(states)
             q = self.critic([states, a])
-            actor_loss = -tf.reduce_mean(q)  # maximize the q 更新方式為梯度上升 故前面要加上負號
+            actor_loss = -tf.reduce_mean(q)  # 取平均 maximize the q 更新方式為梯度上升 故前面要加上負號
 
             #CAPS
-            if lam_a >0:
+            #時間正則項
+            if lam_a >0:       #nn.l2_loss = sum(t**2)/2            
                 actor_loss+= lam_a*tf.nn.l2_loss(actions_-actions)/tf.cast(tf.shape(actions)[0],float)
+            #空間正則項
             if lam_s >0:
                 actor_loss+= lam_s*tf.nn.l2_loss(a-actions)/tf.cast(tf.shape(actions)[0],float)
-            
-        actor_grads = tape.gradient(actor_loss, self.actor.trainable_weights)
-        self.actor_opt.apply_gradients(zip(actor_grads, self.actor.trainable_weights))
-        self.ema_update()#滑動平均更新(將新的參數賦值給target net)
+
+        
+        actor_grads = tape.gradient(actor_loss, self.actor.trainable_weights)#計算反向傳播
+        self.actor_opt.apply_gradients(zip(actor_grads, self.actor.trainable_weights))#再更新actor
+        self.ema_update()#滑動平均更新(將新的參數賦值給target net) 最後再更新traget net
     
     
     
@@ -296,7 +302,7 @@ def saveresult():
     if not os.path.exists('image'):
         os.makedirs('image')
     plt.savefig(os.path.join('image', '_'.join([ALG_NAME, ENV_ID])))
-    print("Training is done!!")
+    print("Training is done!!",agent.var)
 
 if __name__ == '__main__':
     env = AUVEnvironment()
@@ -327,7 +333,7 @@ if __name__ == '__main__':
     i=1
     try:
         print("Start training ...")
-        #agent.load()#接續上一次的
+        agent.load()#接續上一次的
         for episode in range(TRAIN_EPISODES):
             t0 = time.time()
             state = env.reset()
@@ -345,6 +351,7 @@ if __name__ == '__main__':
 
                 if agent.pointer > MEMORY_CAPACITY: #如果數據量足夠，便隨機抽樣，更新actor和critic 
                     agent.learn()
+                #if episode >5:
                     recenttruefalse = 1
                 state = state_ #更新狀態值
                 episode_reward += reward
