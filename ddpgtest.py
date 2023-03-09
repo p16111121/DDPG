@@ -79,12 +79,14 @@ if __name__ == '__main__':
             t0 = time.time()
             state = env.reset()
             episode_reward = 0
+            episode_error = 0
             stern_angle=[]
             for step in range(MAX_STEPS):
                 action = np.array(agent.get_action(state ,greedy=True))
                 state_, reward, done = env.step(state,action,step)
                 stern_angle.append(action.flatten().tolist())
-                episode_reward += reward
+                episode_reward += reward[0]
+                episode_error += reward[1]
                 state = state_
                 if done:
                     break
@@ -92,9 +94,9 @@ if __name__ == '__main__':
             i+=1
             
             print(
-                'Testing  | Episode: {}/{}  | Episode Reward: {:.4f}  | Running Time: {:.4f}'.format(
+                'Testing  | Episode: {}/{}  | Episode Reward: {:.4f}  | Running Time: {:.4f}  | Trajectory Error: {:.4f}'.format(
                     episode + 1, TEST_EPISODES, episode_reward,
-                    time.time() - t0
+                    time.time() - t0,episode_error/MAX_STEPS
                 )
             )
     except Exception as e:

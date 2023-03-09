@@ -18,7 +18,7 @@ RANDOM_SEED = 123  # random seed, can be either an int number or None
 RENDER = False  # render while training
 
 ALG_NAME = 'DDPG'
-TRAIN_EPISODES = 5000  # total number of episodes for training
+TRAIN_EPISODES = 3000  # total number of episodes for training
 TEST_EPISODES = 10  # total number of episodes for training
 MAX_STEPS = 200  # total number of steps for each episode
 
@@ -28,10 +28,10 @@ GAMMA = 0.9  # reward discount
 TAU = 0.01  # soft replacement
 MEMORY_CAPACITY = 10000  # size of replay buffer
 BATCH_SIZE = 32  # update action batch size
-VAR = 0  # control exploration
+VAR = 4  # control exploration
 
-lam_a=1
-lam_s=1
+lam_a=0.5
+lam_s=0.5
 
 ###############################  DDPG  ####################################
 #預設路徑 200筆
@@ -63,9 +63,11 @@ class AUVEnvironment(object):
         current_pitch=(state_[10])*57.3 #當前pitch
         pitch_error=abs(self.old_pitch-current_pitch) # pitch angle 誤差絕對值 單位theta
         #if pitch_error<= 1: pitch_error=0 #pitch誤差小於1度
-        #reward=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
-        reward=(-1)*dep_error
+        #r=(-1)*dep_error+(-1)*pitch_error*1.05/180+(-1)*stern_error*0.065/180
+        r=(-1)*dep_error
 
+        error=dep_error
+        reward=[r,error]
         self.old_pitch=current_pitch
         self.old_stern=stern[0]
 
@@ -194,6 +196,7 @@ class DDPG(object):
         :return: None
         """
         self.var *= .9995
+        #self.var *= .999995
         indices = np.random.choice(MEMORY_CAPACITY, size=BATCH_SIZE) 
         datas = self.memory[indices, :]#隨機抽取數據
         states = datas[:, :self.state_dim]#取出狀態
@@ -217,7 +220,7 @@ class DDPG(object):
             a = self.actor(states)
             q = self.critic([states, a])
             actor_loss = -tf.reduce_mean(q)  # 取平均 maximize the q 更新方式為梯度上升 故前面要加上負號
-
+            
             #CAPS
             #時間正則項
             if lam_a >0:       #nn.l2_loss = sum(t**2)/2            
@@ -328,7 +331,7 @@ if __name__ == '__main__':
     print("Folder finished!!")
     # train
     all_episode_reward = []
-    recent_episode_reward = np.zeros(5)
+    recent_episode_error = np.zeros(5)
     recenttruefalse = 0
     i=1
     try:
@@ -339,6 +342,7 @@ if __name__ == '__main__':
             state = env.reset()
             stern_angle=[]
             episode_reward = 0
+            episode_error = 0
             for step in range(MAX_STEPS):
                 #if step>=20:
                 action = agent.get_action(state)#得到動作 action>0代表向下 action<0代表向上
@@ -347,14 +351,15 @@ if __name__ == '__main__':
                 stern_angle.append(action.flatten().tolist())
                 state_, reward, done = env.step(state,action,step)
 
-                agent.store_transition(state, action, reward, state_)#儲存歷史資料
+                agent.store_transition(state, action, reward[0], state_)#儲存歷史資料
 
                 if agent.pointer > MEMORY_CAPACITY: #如果數據量足夠，便隨機抽樣，更新actor和critic 
                     agent.learn()
                 #if episode >5:
                     recenttruefalse = 1
                 state = state_ #更新狀態值
-                episode_reward += reward
+                episode_reward += reward[0]
+                episode_error += reward[1] #每回合之累計誤差
                 if done:
                     print("Done!")
                     break
@@ -366,15 +371,15 @@ if __name__ == '__main__':
             else:
                 all_episode_reward.append(all_episode_reward[-1] * 0.9 + episode_reward * 0.1)#old reward*0.9 new reward*0.1
             print(
-                'Training  | Episode: {}/{}  | Episode Reward: {:.4f}  | Running Time: {:.4f}'.format(
+                'Training  | Episode: {}/{}  | Episode Reward: {:.4f}  | Running Time: {:.4f}  | Trajectory Error: {:.4f}'.format(
                     episode + 1, TRAIN_EPISODES, episode_reward,
-                    time.time() - t0
+                    time.time() - t0,episode_error/MAX_STEPS
                 )
             )
-            recent_episode_reward[episode%5]=episode_reward
+            recent_episode_error[episode%5]=(episode_error/MAX_STEPS)#紀錄平均誤差
             if recenttruefalse == 1:
-                if sum(recent_episode_reward)/5 >= -0.5:
-                    print("Error > -0.5! Stop Training...")
+                if sum(recent_episode_error)/5 <= 0.0005: #平均誤差小於0.05公分
+                    print("平均每秒誤差 < 0.05cm! Stop Training...")
                     break
             if (episode+1)%100==0: #每100episode存一次結果
                 saveresult()

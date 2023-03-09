@@ -39,6 +39,7 @@ tspan = told:0.5:told+1;%每秒之間積分間隔 [189,189.5,190]
 
 inputs=input(told+1,:);%最新的舵板角度
 %tspan 積分間隔 init 初始條件
+%ode45解 y` 在 tspan的積分
 [t,states] = ode45('odefunc',tspan,init); % Each row in the solution array y corresponds to a value returned in column vector t.
 u = states(end,1);%縱移速度
 v = states(end,2);%橫移速度
